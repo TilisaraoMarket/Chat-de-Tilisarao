@@ -24,24 +24,43 @@ $(function () {
     e.preventDefault();
     const nick = $nickname.val().trim();
     const pass = $password.val();
+    const avatar = $('#avatar')[0].files[0];
+    
     if (!nick || !pass) {
       $nickError.html('<div class="alert alert-danger">Completa apodo y contraseña.</div>');
       return;
     }
-    $.post('/login', { nick, password: pass }, function (data) {
-      if (data.success) {
-        // Asociar el usuario al socket
-        socket.emit("new user", nick, function (ok) {
-          if (ok) {
-            $("#nickWrap").hide();
-            document.querySelector("#contentWrap").style.display = "flex";
-            $("#message").focus();
-          } else {
-            $nickError.html('<div class="alert alert-danger">Ese apodo ya está en uso en el chat.</div>');
-          }
-        });
-      } else {
-        $nickError.html('<div class="alert alert-danger">' + data.message + '</div>');
+
+    const formData = new FormData();
+    formData.append('nick', nick);
+    formData.append('password', pass);
+    if (avatar) {
+      formData.append('avatar', avatar);
+    }
+
+    $.ajax({
+      url: '/login',
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function (data) {
+        if (data.success) {
+          // Asociar el usuario al socket
+          socket.emit("new user", nick, function (ok) {
+            if (ok) {
+              $("#nickWrap").hide();
+              document.querySelector("#contentWrap").style.display = "flex";
+              $("#message").focus();
+              // Store avatar URL in localStorage
+              localStorage.setItem('avatar', data.avatarUrl);
+            } else {
+              $nickError.html('<div class="alert alert-danger">Ese apodo ya está en uso en el chat.</div>');
+            }
+          });
+        } else {
+          $nickError.html('<div class="alert alert-danger">' + data.message + '</div>');
+        }
       }
     });
   });
@@ -77,11 +96,27 @@ $(function () {
     displayMsg(data);
   });
 
+  // Handle private messages
+  socket.on('private message', (data) => {
+    if (data.type === 'sent') {
+      $chat.append(`<p class="private-message-sent"><b>Tú → ${data.nick}:</b> ${data.msg}</p>`);
+    } else {
+      $chat.append(`<p class="private-message-received"><b>${data.nick} → Tú:</b> ${data.msg}</p>`);
+    }
+    $chat.scrollTop($chat[0].scrollHeight);
+  });
+
   // Mostrar usuarios y permitir chat privado
   socket.on("usernames", (data) => {
     let html = "";
     for (let i = 0; i < data.length; i++) {
-      html += `<p class="user-item" data-user="${data[i]}"><i class="fas fa-user"></i> ${data[i]}</p>`;
+      const avatarUrl = localStorage.getItem('avatar') || '/images/default-avatar.png';
+      html += `
+        <div class="user-item" data-user="${data[i]}">
+          <img src="${avatarUrl}" class="avatar" alt="Avatar">
+          <span><i class="fas fa-user"></i> ${data[i]}</span>
+        </div>
+      `;
     }
     $users.html(html);
   });
