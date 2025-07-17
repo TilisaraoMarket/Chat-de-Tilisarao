@@ -7,31 +7,54 @@ $(function () {
   const $messageBox = $("#message");
   const $chat = $("#chat");
 
-  // obtaining DOM elements from the NicknameForm Interface
-  const $nickForm = $("#nickForm");
+
+  // obteniendo elementos del formulario de autenticación
+  const $authForm = $("#authForm");
   const $nickError = $("#nickError");
   const $nickname = $("#nickname");
+  const $password = $("#password");
+  const $loginBtn = $("#loginBtn");
+  const $registerBtn = $("#registerBtn");
 
   // obtaining the usernames container DOM
   const $users = $("#usernames");
 
-  $nickForm.submit((e) => {
+  // Evento para login
+  $loginBtn.on('click', function (e) {
     e.preventDefault();
-    socket.emit("new user", $nickname.val(), (data) => {
-      if (data) {
+    const nick = $nickname.val().trim();
+    const pass = $password.val();
+    if (!nick || !pass) {
+      $nickError.html('<div class="alert alert-danger">Completa apodo y contraseña.</div>');
+      return;
+    }
+    $.post('/login', { nick, password: pass }, function (data) {
+      if (data.success) {
         $("#nickWrap").hide();
-        // $('#contentWrap').show();
         document.querySelector("#contentWrap").style.display = "flex";
         $("#message").focus();
       } else {
-        $nickError.html(`
-            <div class="alert alert-danger">
-              That username already Exists.
-            </div>
-          `);
+        $nickError.html('<div class="alert alert-danger">' + data.message + '</div>');
       }
     });
-    $nickname.val("");
+  });
+
+  // Evento para registro
+  $registerBtn.on('click', function (e) {
+    e.preventDefault();
+    const nick = $nickname.val().trim();
+    const pass = $password.val();
+    if (!nick || !pass) {
+      $nickError.html('<div class="alert alert-danger">Completa apodo y contraseña.</div>');
+      return;
+    }
+    $.post('/register', { nick, password: pass }, function (data) {
+      if (data.success) {
+        $nickError.html('<div class="alert alert-success">Usuario registrado, ahora puedes iniciar sesión.</div>');
+      } else {
+        $nickError.html('<div class="alert alert-danger">' + data.message + '</div>');
+      }
+    });
   });
 
   // events
@@ -71,5 +94,19 @@ $(function () {
     );
     const chat = document.querySelector("#chat");
     chat.scrollTop = chat.scrollHeight;
+  }
+
+  // Emoji picker
+  const emojiBtn = document.querySelector('#emoji-btn');
+  const messageInput = document.querySelector('#message');
+  if (emojiBtn && messageInput && window.EmojiButton) {
+    const picker = new EmojiButton();
+    emojiBtn.addEventListener('click', () => {
+      picker.togglePicker(emojiBtn);
+    });
+    picker.on('emoji', emoji => {
+      messageInput.value += emoji;
+      messageInput.focus();
+    });
   }
 });
