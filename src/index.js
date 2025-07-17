@@ -3,7 +3,10 @@ import "./database.js";
 import http from "http";
 import { Server } from "socket.io";
 import sockets from "./sockets.js";
-import { PORT, DATABASE_URL, NODE_ENV, DEBUG } from "./config.js";
+import { NODE_ENV, DEBUG } from "./config.js";
+
+// Obtener el puerto del ambiente o usar 80 por defecto
+const PORT = process.env.PORT || 80;
 
 const server = http.createServer(app);
 const io = new Server(server);
@@ -36,9 +39,8 @@ try {
 }
 
 // Iniciar servidor
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     log(`Server running in ${NODE_ENV} mode on port ${PORT}`);
-    log(`Database URL: ${DATABASE_URL}`);
 });
 
 // Manejo de errores del servidor

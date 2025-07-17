@@ -10,15 +10,27 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000, // return an error after 2 seconds if connection could not be established
 });
 
-// Initialize database
+// Initialize database and create tables if they don't exist
 (async () => {
   try {
     // Test the connection
     const client = await pool.connect();
+    
+    // Create users table if it doesn't exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        nick VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        avatar VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    console.log("Database initialized and tables created");
     client.release();
-    console.log("Connected to PostgreSQL database");
   } catch (error) {
-    console.error("Database connection error:", error);
+    console.error("Database initialization error:", error);
   }
 })();
 
