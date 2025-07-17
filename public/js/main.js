@@ -19,6 +19,84 @@ $(function () {
   // obtaining the usernames container DOM
   const $users = $("#usernames");
 
+  // --- INICIO: Persistencia de sesión ---
+
+  // Función para verificar sesión existente al cargar la página
+  function checkExistingSession() {
+    const savedUser = localStorage.getItem('chatUser');
+    const sessionToken = localStorage.getItem('sessionToken');
+    if (savedUser && sessionToken) {
+      $nickError.html('<div class="alert alert-info">Verificando sesión...</div>');
+      $.post('/verify-session', { nick: savedUser, token: sessionToken }, function (data) {
+        if (data.success) {
+          connectUserToChat(savedUser);
+        } else {
+          clearSession();
+          $nickError.html('<div class="alert alert-warning">Sesión expirada, por favor inicia sesión nuevamente.</div>');
+        }
+      }).fail(function() {
+        clearSession();
+        $nickError.html('<div class="alert alert-danger">Error verificando sesión, por favor inicia sesión.</div>');
+      });
+    }
+  }
+
+  // Función para limpiar datos de sesión
+  function clearSession() {
+    localStorage.removeItem('chatUser');
+    localStorage.removeItem('sessionToken');
+  }
+
+  // Función para conectar usuario al chat
+  function connectUserToChat(nick) {
+    socket.emit("new user", nick, function (ok) {
+      if (ok) {
+        $("#nickWrap").hide();
+        document.querySelector("#contentWrap").style.display = "flex";
+        $("#message").focus();
+        $("#logoutBtn").show();
+        $nickError.html('');
+      } else {
+        $nickError.html('<div class="alert alert-danger">Ese apodo ya está en uso en el chat.</div>');
+        clearSession();
+      }
+    });
+  }
+
+  // Función para cerrar sesión
+  function logout() {
+    const token = localStorage.getItem('sessionToken');
+    if (token) {
+      $.post('/logout', { token: token });
+    }
+    clearSession();
+    socket.disconnect();
+    location.reload();
+  }
+
+  // Verificar sesión al cargar la página
+  checkExistingSession();
+
+  // Evento para logout
+  $(document).on('click', '#logoutBtn', function (e) {
+    e.preventDefault();
+    if (confirm('¿Estás seguro que quieres cerrar sesión?')) {
+      logout();
+    }
+  });
+
+  // Atajo de teclado para logout (Ctrl + L)
+  $(document).on('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'l') {
+      e.preventDefault();
+      if (confirm('¿Cerrar sesión?')) {
+        logout();
+      }
+    }
+  });
+
+  // --- FIN: Persistencia de sesión ---
+
   // Evento para login
   $loginBtn.on('click', function (e) {
     e.preventDefault();
@@ -28,21 +106,17 @@ $(function () {
       $nickError.html('<div class="alert alert-danger">Completa apodo y contraseña.</div>');
       return;
     }
+    $nickError.html('<div class="alert alert-info">Iniciando sesión...</div>');
     $.post('/login', { nick, password: pass }, function (data) {
-      if (data.success) {
-        // Asociar el usuario al socket
-        socket.emit("new user", nick, function (ok) {
-          if (ok) {
-            $("#nickWrap").hide();
-            document.querySelector("#contentWrap").style.display = "flex";
-            $("#message").focus();
-          } else {
-            $nickError.html('<div class="alert alert-danger">Ese apodo ya está en uso en el chat.</div>');
-          }
-        });
+      if (data.success && data.token) {
+        localStorage.setItem('chatUser', nick);
+        localStorage.setItem('sessionToken', data.token);
+        connectUserToChat(nick);
       } else {
-        $nickError.html('<div class="alert alert-danger">' + data.message + '</div>');
+        $nickError.html('<div class="alert alert-danger">' + (data.message || 'Error de login') + '</div>');
       }
+    }).fail(function() {
+      $nickError.html('<div class="alert alert-danger">Error de conexión, intenta nuevamente.</div>');
     });
   });
 
