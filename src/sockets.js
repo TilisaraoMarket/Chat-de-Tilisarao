@@ -32,17 +32,9 @@ export default io => {
           var name = msg.substring(0, index);
           var msg = msg.substring(index + 1);
           if (name in users) {
-            // Send to recipient
-            users[name].emit('private message', {
+            users[name].emit('whisper', {
               msg,
-              nick: socket.nickname,
-              type: 'received'
-            });
-            // Send confirmation to sender
-            socket.emit('private message', {
-              msg,
-              nick: name,
-              type: 'sent'
+              nick: socket.nickname 
             });
           } else {
             cb('Error! Enter a valid User');
@@ -59,24 +51,6 @@ export default io => {
         io.sockets.emit('new message', {
           msg,
           nick: socket.nickname
-        });
-      }
-    });
-
-    // Handle private message event
-    socket.on('private message', async (data) => {
-      if (data.to in users) {
-        // Send to recipient
-        users[data.to].emit('private message', {
-          msg: data.msg,
-          nick: socket.nickname,
-          type: 'received'
-        });
-        // Send confirmation to sender
-        socket.emit('private message', {
-          msg: data.msg,
-          nick: data.to,
-          type: 'sent'
         });
       }
     });

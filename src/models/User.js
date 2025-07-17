@@ -2,10 +2,10 @@ import pool from '../database.js';
 import bcrypt from 'bcryptjs';
 
 class User {
-  static async create({ nick, password, avatar }) {
+  static async create({ nick, password }) {
     const hash = await bcrypt.hash(password, 10);
-    const query = 'INSERT INTO users (nick, password, avatar) VALUES ($1, $2, $3) RETURNING id, nick, avatar';
-    const result = await pool.query(query, [nick, hash, avatar]);
+    const query = 'INSERT INTO users (nick, password) VALUES ($1, $2) RETURNING id, nick';
+    const result = await pool.query(query, [nick, hash]);
     return result.rows[0];
   }
 

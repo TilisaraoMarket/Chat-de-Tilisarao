@@ -1,8 +1,0 @@
-image: node:22
-
-build:
-  command: npm install
-
-start:
-  command: npm run seenode-start
-  port: 80
