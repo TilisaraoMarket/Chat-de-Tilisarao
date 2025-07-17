@@ -77,16 +77,30 @@ $(function () {
     displayMsg(data);
   });
 
+  // Mostrar usuarios y permitir chat privado
   socket.on("usernames", (data) => {
     let html = "";
-    for (i = 0; i < data.length; i++) {
-      html += `<p><i class="fas fa-user"></i> ${data[i]}</p>`;
+    for (let i = 0; i < data.length; i++) {
+      html += `<p class="user-item" data-user="${data[i]}"><i class="fas fa-user"></i> ${data[i]}</p>`;
     }
     $users.html(html);
   });
 
+  // Evento click en usuario para chat privado
+  $users.on('click', '.user-item', function () {
+    const toUser = $(this).data('user');
+    const myUser = $nickname.val() || localStorage.getItem('myUser');
+    if (toUser && toUser !== myUser) {
+      const privateMsg = prompt(`Mensaje privado para ${toUser}:`);
+      if (privateMsg) {
+        socket.emit('private message', { to: toUser, msg: privateMsg });
+        $chat.append(`<p class="whisper text-end"><b>Tú → ${toUser}:</b> ${privateMsg}</p>`);
+      }
+    }
+  });
+
   socket.on("whisper", (data) => {
-    $chat.append(`<p class="whisper"><b>${data.nick}</b>: ${data.msg}</p>`);
+    $chat.append(`<p class="whisper"><b>${data.nick} → Tú:</b> ${data.msg}</p>`);
   });
 
   socket.on("load old msgs", (msgs) => {
@@ -103,17 +117,16 @@ $(function () {
     chat.scrollTop = chat.scrollHeight;
   }
 
-  // Emoji picker
-  const emojiBtn = document.querySelector('#emoji-btn');
-  const messageInput = document.querySelector('#message');
-  if (emojiBtn && messageInput && window.EmojiButton) {
+  // Emoji picker (corregido para asegurar inicialización y compatibilidad jQuery)
+  if (window.EmojiButton) {
     const picker = new EmojiButton();
-    emojiBtn.addEventListener('click', () => {
-      picker.togglePicker(emojiBtn);
+    $('#emoji-btn').on('click', function (e) {
+      picker.togglePicker(this);
     });
-    picker.on('emoji', emoji => {
-      messageInput.value += emoji;
-      messageInput.focus();
+    picker.on('emoji', function (emoji) {
+      const $msg = $('#message');
+      $msg.val($msg.val() + emoji);
+      $msg.focus();
     });
   }
 });
