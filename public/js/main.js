@@ -30,9 +30,16 @@ $(function () {
     }
     $.post('/login', { nick, password: pass }, function (data) {
       if (data.success) {
-        $("#nickWrap").hide();
-        document.querySelector("#contentWrap").style.display = "flex";
-        $("#message").focus();
+        // Asociar el usuario al socket
+        socket.emit("new user", nick, function (ok) {
+          if (ok) {
+            $("#nickWrap").hide();
+            document.querySelector("#contentWrap").style.display = "flex";
+            $("#message").focus();
+          } else {
+            $nickError.html('<div class="alert alert-danger">Ese apodo ya está en uso en el chat.</div>');
+          }
+        });
       } else {
         $nickError.html('<div class="alert alert-danger">' + data.message + '</div>');
       }
