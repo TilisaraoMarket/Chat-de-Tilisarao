@@ -3,8 +3,6 @@ import Chat from './models/Chat.js'
 export default io => {
 
   let users = {};
-  // Almacén temporal de fotos de perfil
-  let userPics = {};
 
   io.on('connection', async socket => {
 
@@ -12,23 +10,13 @@ export default io => {
 
     socket.emit('load old msgs', messages);
 
-    socket.on('new user', async (data, cb) => {
-      // data puede ser solo nick, pero vamos a buscar la foto en la base de datos
-      const nick = typeof data === 'string' ? data : (data.nick || '');
-      if (nick in users) {
+    socket.on('new user', (data, cb) => {
+      if (data in users) {
         cb(false);
       } else {
         cb(true);
-        socket.nickname = nick;
+        socket.nickname = data;
         users[socket.nickname] = socket;
-        // Buscar foto de perfil
-        try {
-          const { findByNick } = await import('./models/User.js');
-          const user = await (await import('./models/User.js')).default.findByNick(nick);
-          userPics[nick] = user && user.profile_pic ? user.profile_pic : null;
-        } catch (e) {
-          userPics[nick] = null;
-        }
         updateNicknames();
       }
     });
@@ -74,9 +62,7 @@ export default io => {
     });
 
     function updateNicknames() {
-      // Enviar nick y foto de perfil
-      const userList = Object.keys(users).map(nick => ({ nick, profilePic: userPics[nick] || null }));
-      io.sockets.emit('usernames', userList);
+      io.sockets.emit('usernames', Object.keys(users));
     }
   });
 

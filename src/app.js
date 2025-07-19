@@ -28,12 +28,12 @@ setInterval(cleanExpiredTokens, 60 * 60 * 1000);
 
 // Ruta de registro
 app.post('/register', async (req, res) => {
-  const { nick, password, profilePic } = req.body;
+  const { nick, password } = req.body;
   if (!nick || !password) return res.json({ success: false, message: 'Datos incompletos.' });
   try {
     const exists = await User.findByNick(nick);
     if (exists) return res.json({ success: false, message: 'El apodo ya existe.' });
-    await User.create({ nick, password, profilePic });
+    await User.create({ nick, password });
     res.json({ success: true });
   } catch (err) {
     res.json({ success: false, message: 'Error en el registro.' });
@@ -42,15 +42,11 @@ app.post('/register', async (req, res) => {
 
 // Ruta de login
 app.post('/login', async (req, res) => {
-  const { nick, password, profilePic } = req.body;
+  const { nick, password } = req.body;
   if (!nick || !password) return res.json({ success: false, message: 'Datos incompletos.' });
   try {
     const user = await User.validatePassword(nick, password);
     if (!user) return res.json({ success: false, message: 'Credenciales incorrectas.' });
-    // Si se envía una nueva foto de perfil, actualizarla
-    if (profilePic) {
-      await pool.query('UPDATE users SET profile_pic = $1 WHERE nick = $2', [profilePic, nick]);
-    }
     // Generar token de sesión
     const token = generateSessionToken();
     const expiresAt = Date.now() + SESSION_DURATION;
